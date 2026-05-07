@@ -125,7 +125,7 @@ app.post('/api/funding', upload.fields([
 
     // Send email using SendGrid HTTP API
     const msg = {
-      to: ['emporiumsolution777@gmail.com', 'eurwin97@gmail.com'],
+      to: ['eurwinchandra@gmail.com', 'danielthe27134@gmail.com'],
       from: 'emporiumsolution777@gmail.com',
       subject: `[Emporium Solution] New Funding Application - ${companyName}`,
       html: `
