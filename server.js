@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
@@ -11,9 +11,12 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Set SendGrid API key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
 // Middleware
 app.use(cors({
-  origin: ['https://emporiumsolution.id', 'http://localhost:5173', 'http://localhost:5200'],
+  origin: ['https://emporiumsolution.id', 'http://localhost:5173', 'http://localhost:5200', 'https://empbiz-backend.onrender.com'],
   methods: ['POST', 'GET'],
   credentials: true
 }));
@@ -39,17 +42,6 @@ const upload = multer({
   storage: storage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
-  }
-});
-
-// Nodemailer transporter using SendGrid
-const transporter = nodemailer.createTransport({
-  host: 'smtp.sendgrid.net',
-  port: 587,
-  secure: false,
-  auth: {
-    user: 'apikey',
-    pass: process.env.SENDGRID_API_KEY
   }
 });
 
@@ -79,48 +71,62 @@ app.post('/api/funding', upload.fields([
       hasDocuments
     } = req.body;
 
-    // Prepare attachments with unique filenames
+    // Prepare attachments
     const attachments = [];
     const files = req.files;
-    let fileCounter = 1;
 
     if (files) {
       if (files.companyProfile) {
+        const fileContent = fs.readFileSync(files.companyProfile[0].path, { encoding: 'base64' });
         attachments.push({
+          content: fileContent,
           filename: `01_CompanyProfile_${files.companyProfile[0].originalname}`,
-          path: files.companyProfile[0].path
+          type: 'application/pdf',
+          disposition: 'attachment'
         });
       }
       if (files.financialReport) {
+        const fileContent = fs.readFileSync(files.financialReport[0].path, { encoding: 'base64' });
         attachments.push({
+          content: fileContent,
           filename: `02_FinancialReport_${files.financialReport[0].originalname}`,
-          path: files.financialReport[0].path
+          type: 'application/pdf',
+          disposition: 'attachment'
         });
       }
       if (files.businessPlan) {
+        const fileContent = fs.readFileSync(files.businessPlan[0].path, { encoding: 'base64' });
         attachments.push({
+          content: fileContent,
           filename: `03_BusinessPlan_${files.businessPlan[0].originalname}`,
-          path: files.businessPlan[0].path
+          type: 'application/pdf',
+          disposition: 'attachment'
         });
       }
       if (files.pitchDeck) {
+        const fileContent = fs.readFileSync(files.pitchDeck[0].path, { encoding: 'base64' });
         attachments.push({
+          content: fileContent,
           filename: `04_PitchDeck_${files.pitchDeck[0].originalname}`,
-          path: files.pitchDeck[0].path
+          type: 'application/pdf',
+          disposition: 'attachment'
         });
       }
       if (files.otherDocuments) {
+        const fileContent = fs.readFileSync(files.otherDocuments[0].path, { encoding: 'base64' });
         attachments.push({
+          content: fileContent,
           filename: `05_OtherDocuments_${files.otherDocuments[0].originalname}`,
-          path: files.otherDocuments[0].path
+          type: 'application/pdf',
+          disposition: 'attachment'
         });
       }
     }
 
-    // Send email
-    const mailOptions = {
-      from: 'emporiumsolution777@gmail.com',
+    // Send email using SendGrid HTTP API
+    const msg = {
       to: 'emporiumsolution777@gmail.com',
+      from: 'emporiumsolution777@gmail.com',
       subject: `[Emporium Solution] New Funding Application - ${companyName}`,
       html: `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
@@ -185,7 +191,7 @@ app.post('/api/funding', upload.fields([
       attachments: attachments
     };
 
-    await transporter.sendMail(mailOptions);
+    await sgMail.send(msg);
 
     // Clean up uploaded files after sending
     if (files) {
